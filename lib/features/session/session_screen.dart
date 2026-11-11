@@ -480,26 +480,33 @@ class _PoseChecks {
   bool _poseDetected(PoseFrame frame, Exercise exercise) {
     if (exercise.side == ExerciseSide.front) {
       final shoulders =
-          frame.has(PoseLandmarkType.leftShoulder, minLikelihood: 0.3) &&
-          frame.has(PoseLandmarkType.rightShoulder, minLikelihood: 0.3);
+          frame.has(PoseLandmarkType.leftShoulder, minLikelihood: 0.2) &&
+          frame.has(PoseLandmarkType.rightShoulder, minLikelihood: 0.2);
       final arms =
-          frame.has(PoseLandmarkType.leftElbow, minLikelihood: 0.25) ||
-          frame.has(PoseLandmarkType.rightElbow, minLikelihood: 0.25) ||
-          frame.has(PoseLandmarkType.leftWrist, minLikelihood: 0.25) ||
-          frame.has(PoseLandmarkType.rightWrist, minLikelihood: 0.25);
+          frame.has(PoseLandmarkType.leftElbow, minLikelihood: 0.15) ||
+          frame.has(PoseLandmarkType.rightElbow, minLikelihood: 0.15) ||
+          frame.has(PoseLandmarkType.leftWrist, minLikelihood: 0.15) ||
+          frame.has(PoseLandmarkType.rightWrist, minLikelihood: 0.15);
       return shoulders && arms;
     }
 
+    // Lebih toleran: minimal 3 dari 4 titik (bahu-pinggul-lutut-mata kaki)
+    // terlihat, jadi badan tetap terdeteksi walau ujung kaki sedikit keluar frame.
     bool chain(
       PoseLandmarkType shoulder,
       PoseLandmarkType hip,
       PoseLandmarkType knee,
       PoseLandmarkType ankle,
     ) {
-      return frame.has(shoulder, minLikelihood: 0.25) &&
-          frame.has(hip, minLikelihood: 0.25) &&
-          frame.has(knee, minLikelihood: 0.25) &&
-          frame.has(ankle, minLikelihood: 0.2);
+      final visible = [
+        shoulder,
+        hip,
+        knee,
+        ankle,
+      ].where((type) => frame.has(type, minLikelihood: 0.15)).length;
+      return frame.has(shoulder, minLikelihood: 0.15) &&
+          frame.has(hip, minLikelihood: 0.15) &&
+          visible >= 3;
     }
 
     return chain(
