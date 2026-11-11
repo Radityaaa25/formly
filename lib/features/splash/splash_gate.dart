@@ -21,38 +21,79 @@ class SplashGate extends ConsumerWidget {
     );
   }
 
+  bool _hasSession() {
+    if (!Env.hasSupabase) return false;
+    try {
+      return Supabase.instance.client.auth.currentSession != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _continue(BuildContext context, WidgetRef ref) async {
-    final onboardingDone = await Prefs.onboardingDone();
-    final savedMode = await Prefs.savedMode();
-    if (savedMode != null) {
-      ref.read(appModeProvider.notifier).setMode(savedMode);
+    final hasSession = _hasSession();
+    final fallback = hasSession ? AppRoutes.home : AppRoutes.auth;
+    debugPrint('[Splash] start (session=$hasSession)');
+
+    var destination = fallback;
+    try {
+      destination = await _resolveDestination(ref, hasSession).timeout(
+        const Duration(seconds: 6),
+        onTimeout: () {
+          debugPrint('[Splash] timeout, fallback to $fallback');
+          return fallback;
+        },
+      );
+    } catch (error, stack) {
+      debugPrint('[Splash] error: $error\n$stack');
     }
 
-    var loggedIn = false;
-    if (Env.hasSupabase) {
-      loggedIn = Supabase.instance.client.auth.currentSession != null;
+    debugPrint('[Splash] go $destination');
+    if (context.mounted) context.go(destination);
+  }
+
+  Future<String> _resolveDestination(WidgetRef ref, bool hasSession) async {
+    var onboardingDone = false;
+    try {
+      onboardingDone = await Prefs.onboardingDone().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false,
+      );
+      final savedMode = await Prefs.savedMode().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
+      );
+      if (savedMode != null) {
+        ref.read(appModeProvider.notifier).setMode(savedMode);
+      }
+    } catch (error) {
+      debugPrint('[Splash] prefs error: $error');
     }
 
-    if (loggedIn) {
-      ref.read(appRoleProvider.notifier).setRole(await resolveCurrentRole());
+    if (!hasSession) return AppRoutes.auth;
+
+    var role = AppRole.self;
+    try {
+      final results = await Future.wait<Object?>([
+        resolveCurrentRole().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () => AppRole.self,
+        ),
+        resolveCurrentUser().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () => null,
+        ),
+      ]);
+      role = results[0] as AppRole;
+      ref.read(appRoleProvider.notifier).setRole(role);
       ref
           .read(currentUserProvider.notifier)
-          .setUser(await resolveCurrentUser());
+          .setUser(results[1] as CurrentUser?);
+    } catch (error) {
+      debugPrint('[Splash] profile error: $error');
     }
 
-    if (!context.mounted) return;
-
-    if (!loggedIn) {
-      context.go(AppRoutes.auth);
-      return;
-    }
-    if (!onboardingDone) {
-      context.go(AppRoutes.onboarding);
-      return;
-    }
-    final role = ref.read(appRoleProvider);
-    context.go(
-      role == AppRole.therapist ? AppRoutes.therapist : AppRoutes.home,
-    );
+    if (!onboardingDone) return AppRoutes.onboarding;
+    return role == AppRole.therapist ? AppRoutes.therapist : AppRoutes.home;
   }
 }

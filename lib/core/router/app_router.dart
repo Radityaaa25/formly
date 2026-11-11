@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/auth_screen.dart';
@@ -28,6 +29,30 @@ abstract final class AppRoutes {
   static const coach = '/tanya';
   static const therapist = '/terapis';
   static const therapistProgram = '/terapis/program';
+}
+
+CustomTransitionPage<void> _fadeSlidePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 280),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.035),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
 }
 
 final GoRouter appRouter = GoRouter(
@@ -85,16 +110,28 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.session,
-      builder: (context, state) =>
-          SessionScreen(exerciseId: state.uri.queryParameters['ex'] ?? 'squat'),
+      pageBuilder: (context, state) {
+        final params = state.uri.queryParameters;
+        return _fadeSlidePage(
+          state,
+          SessionScreen(
+            exerciseId: params['ex'] ?? 'squat',
+            variationName: params['var'],
+            sets: int.tryParse(params['sets'] ?? ''),
+            reps: int.tryParse(params['reps'] ?? ''),
+          ),
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.summary,
-      builder: (context, state) => const SummaryScreen(),
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(state, const SummaryScreen()),
     ),
     GoRoute(
       path: AppRoutes.coach,
-      builder: (context, state) => const ChatScreen(),
+      pageBuilder: (context, state) =>
+          _fadeSlidePage(state, const ChatScreen()),
     ),
     GoRoute(
       path: AppRoutes.therapistProgram,

@@ -26,32 +26,28 @@ class AppChip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          constraints: const BoxConstraints(minHeight: 40),
+          constraints: const BoxConstraints(minHeight: 42),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
           decoration: BoxDecoration(
-            color: active
-                ? AppColors.primary
-                : Colors.white.withValues(alpha: 0.9),
+            color: active ? AppColors.primary : Colors.white,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: active
-                  ? Colors.white.withValues(alpha: 0.35)
-                  : Colors.white,
-              width: 1.2,
+              color: active ? AppColors.primaryDeep : AppColors.border,
+              width: 1.5,
             ),
             boxShadow: active
                 ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                    const BoxShadow(
+                      color: AppColors.primaryDeep,
+                      blurRadius: 0,
+                      offset: Offset(0, 3),
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 6,
+                      color: AppColors.foreground.withValues(alpha: 0.05),
+                      blurRadius: 0,
                       offset: const Offset(0, 2),
                     ),
                   ],

@@ -29,7 +29,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<({ChatSender from, String text})> _messages = [
     (
       from: ChatSender.ai,
-      text: 'Halo Raka! Ada yang mau ditanyakan soal latihanmu hari ini?',
+      text: 'Halo! Ada yang mau ditanyakan soal latihanmu hari ini?',
     ),
   ];
   final TextEditingController _input = TextEditingController();

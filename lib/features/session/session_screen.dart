@@ -19,22 +19,33 @@ import '../../core/widgets/pose_camera.dart';
 import '../../data/mock_data.dart';
 import '../../data/models/exercise.dart';
 import '../../data/models/session_result.dart';
+import '../../data/repositories/user_repository.dart';
 import '../../state/app_state.dart';
+import '../../state/user_data_state.dart';
 
 enum _Phase { pain, checks, countdown, live }
 
 class SessionScreen extends ConsumerStatefulWidget {
-  const SessionScreen({super.key, required this.exerciseId});
+  const SessionScreen({
+    super.key,
+    required this.exerciseId,
+    this.variationName,
+    this.sets,
+    this.reps,
+  });
 
   final String exerciseId;
+  final String? variationName;
+  final int? sets;
+  final int? reps;
 
   @override
   ConsumerState<SessionScreen> createState() => _SessionScreenState();
 }
 
 class _SessionScreenState extends ConsumerState<SessionScreen> {
-  static const _targetReps = 10;
-  static const _plankTargetSeconds = 30;
+  late final int _targetReps;
+  late final int _plankTargetSeconds;
 
   late final Exercise _exercise;
   late ExerciseAnalyzer _analyzer;
@@ -71,6 +82,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
   void initState() {
     super.initState();
     _exercise = MockData.exerciseById(widget.exerciseId);
+    _targetReps = widget.reps ?? 10;
+    _plankTargetSeconds = widget.reps ?? 30;
     _analyzer = ExerciseAnalyzer.forExercise(_exercise.id);
     _phase = ref.read(appModeProvider) == AppMode.rehab
         ? _Phase.pain
@@ -321,6 +334,17 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
       errors: errors,
     );
     ref.read(lastSessionProvider.notifier).setResult(result);
+
+    final container = ProviderScope.containerOf(context, listen: false);
+    unawaited(
+      UserRepository.saveSession(result).then((saved) {
+        if (!saved) return;
+        container.invalidate(userDashboardProvider);
+        container.invalidate(userProfileProvider);
+        container.invalidate(rehabProgramProvider);
+      }),
+    );
+
     context.pushReplacement(AppRoutes.summary);
   }
 
@@ -336,6 +360,16 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final variationSubtitle = widget.variationName == null
+        ? null
+        : [
+            widget.variationName!,
+            if (widget.sets != null && widget.reps != null)
+              _timed
+                  ? '${widget.sets}×${widget.reps} dtk'
+                  : '${widget.sets}×${widget.reps} rep',
+          ].join(' · ');
+
     return Scaffold(
       backgroundColor: AppColors.cam,
       body: PoseCamera(
@@ -350,6 +384,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: _TopBar(
                   name: _exercise.name,
+                  subtitle: variationSubtitle,
                   phase: _phase,
                   paused: _paused && _phase == _Phase.live,
                   poseWarning: _poseWarning,
@@ -665,6 +700,7 @@ class _CheckRow extends StatelessWidget {
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.name,
+    this.subtitle,
     required this.phase,
     required this.paused,
     required this.poseWarning,
@@ -673,6 +709,7 @@ class _TopBar extends StatelessWidget {
   });
 
   final String name;
+  final String? subtitle;
   final _Phase phase;
   final bool paused;
   final bool poseWarning;
@@ -692,15 +729,32 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty)
+                  Text(
+                    subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
             ),
           ),
           if (detecting)

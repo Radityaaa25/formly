@@ -2,13 +2,16 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/env.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_progress_bar.dart';
 import '../../core/widgets/badge_tile.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/screen_title.dart';
 import '../../data/mock_data.dart';
+import '../../data/models/user_profile.dart';
 import '../../state/app_state.dart';
+import '../../state/user_data_state.dart';
 
 class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
@@ -17,6 +20,14 @@ class ProgressScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(appModeProvider);
     final workout = mode == AppMode.workout;
+    final dashboard =
+        ref.watch(userDashboardProvider).value ??
+        (Env.hasSupabase ? const UserDashboard() : _demoDashboard());
+    final week = dashboard.week;
+    final hasScores = week.any((day) => day.score > 0);
+    final activeCount = dashboard.activeDays.where((day) => day).length;
+    const weeklyTarget = 5;
+    final targetProgress = (activeCount / weeklyTarget).clamp(0.0, 1.0);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -41,7 +52,13 @@ class ProgressScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    SizedBox(height: 160, child: _ScoreChart()),
+                    if (hasScores)
+                      SizedBox(height: 160, child: _ScoreChart(week: week))
+                    else
+                      const _EmptyChart(
+                        icon: Icons.show_chart_rounded,
+                        message: 'Belum ada skor form minggu ini',
+                      ),
                   ],
                 ),
               ),
@@ -59,7 +76,13 @@ class ProgressScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    SizedBox(height: 140, child: _VolumeChart()),
+                    if (hasScores)
+                      SizedBox(height: 140, child: _VolumeChart(week: week))
+                    else
+                      const _EmptyChart(
+                        icon: Icons.bar_chart_rounded,
+                        message: 'Belum ada data repetisi minggu ini',
+                      ),
                   ],
                 ),
               ),
@@ -89,19 +112,19 @@ class ProgressScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '4 dari 5 hari',
-                            style: TextStyle(
+                            '$activeCount dari $weeklyTarget hari',
+                            style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 13.5,
                             ),
                           ),
                           Text(
-                            '80%',
-                            style: TextStyle(
+                            '${(targetProgress * 100).round()}%',
+                            style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 13.5,
                               color: AppColors.primary,
@@ -110,7 +133,7 @@ class ProgressScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      const AppProgressBar(value: 4, max: 5),
+                      AppProgressBar(value: activeCount, max: weeklyTarget),
                     ],
                     const SizedBox(height: 14),
                     const Text(
@@ -148,7 +171,9 @@ class ProgressScreen extends ConsumerWidget {
                     final badge = MockData.badges[index];
                     return BadgeTile(
                       label: badge.label,
-                      unlocked: badge.unlocked,
+                      unlocked: Env.hasSupabase
+                          ? dashboard.badges.contains(badge.id)
+                          : badge.unlocked,
                     );
                   },
                 ),
@@ -162,9 +187,13 @@ class ProgressScreen extends ConsumerWidget {
 }
 
 class _ScoreChart extends StatelessWidget {
+  const _ScoreChart({required this.week});
+
+  final List<DayStat> week;
+
   @override
   Widget build(BuildContext context) {
-    final scores = MockData.weekScores;
+    final scores = week;
     final spots = <FlSpot>[
       for (var i = 0; i < scores.length; i++)
         if (scores[i].score > 0)
@@ -216,7 +245,7 @@ class _ScoreChart extends StatelessWidget {
                 return SideTitleWidget(
                   meta: meta,
                   child: Text(
-                    scores[index].day,
+                    scores[index].shortLabel,
                     style: const TextStyle(
                       fontSize: 10.5,
                       color: AppColors.mutedForeground,
@@ -254,9 +283,13 @@ class _ScoreChart extends StatelessWidget {
 }
 
 class _VolumeChart extends StatelessWidget {
+  const _VolumeChart({required this.week});
+
+  final List<DayStat> week;
+
   @override
   Widget build(BuildContext context) {
-    final scores = MockData.weekScores;
+    final scores = week;
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
@@ -285,7 +318,7 @@ class _VolumeChart extends StatelessWidget {
                 return SideTitleWidget(
                   meta: meta,
                   child: Text(
-                    scores[index].day,
+                    scores[index].shortLabel,
                     style: const TextStyle(
                       fontSize: 10.5,
                       color: AppColors.mutedForeground,
@@ -313,6 +346,69 @@ class _VolumeChart extends StatelessWidget {
       ),
     );
   }
+}
+
+class _EmptyChart extends StatelessWidget {
+  const _EmptyChart({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 140,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 34,
+              color: AppColors.mutedForeground.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+UserDashboard _demoDashboard() {
+  final now = DateTime.now();
+  final monday = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).subtract(Duration(days: now.weekday - 1));
+  return UserDashboard(
+    currentStreak: 12,
+    longestStreak: 18,
+    freezes: 1,
+    xp: 340,
+    totalSessions: 54,
+    todaySessions: 2,
+    week: [
+      for (var i = 0; i < 7; i++)
+        DayStat(
+          date: monday.add(Duration(days: i)),
+          score: MockData.weekScores[i].score,
+          reps: MockData.weekScores[i].reps,
+          sessions: MockData.weekScores[i].score > 0 ? 1 : 0,
+        ),
+    ],
+    activeDays: [for (final item in MockData.weekScores) item.score > 0],
+    badges: const {'s3', 's7', 'rep100'},
+  );
 }
 
 class _Calendar extends StatelessWidget {

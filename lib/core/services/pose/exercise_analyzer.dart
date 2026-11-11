@@ -156,9 +156,22 @@ class _SquatAnalyzer extends ExerciseAnalyzer {
   final String badTorsoCue;
 
   static const double _upAngle = 160;
+  static const double _maxTorsoLean = 60;
+
   bool _down = false;
   double _minAngle = 180;
   bool _badTorso = false;
+  int _badLeanRun = 0;
+  int _maxBadLeanRun = 0;
+
+  /// Sudut kemiringan torso terhadap sumbu vertikal (0 = tegak).
+  /// Lebih stabil daripada sudut pinggul untuk mendeteksi bungkuk.
+  double _torsoLean(_Side side) {
+    final dx = side.shoulder.x - side.hip.x;
+    final dy = side.shoulder.y - side.hip.y;
+    if (dy >= 0) return 90;
+    return math.atan2(dx.abs(), -dy) * 180 / math.pi;
+  }
 
   @override
   AnalyzerOutput update(PoseFrame frame) {
@@ -166,7 +179,8 @@ class _SquatAnalyzer extends ExerciseAnalyzer {
     if (side == null) return invalid();
 
     final knee = angleDeg(side.hip, side.knee, side.ankle);
-    final torso = angleDeg(side.shoulder, side.hip, side.knee);
+    final lean = _torsoLean(side);
+    final excessiveLean = lean > _maxTorsoLean;
 
     String? cue;
 
@@ -174,22 +188,34 @@ class _SquatAnalyzer extends ExerciseAnalyzer {
       if (knee <= downAngle) {
         _down = true;
         _minAngle = knee;
-        _badTorso = torso < 145;
+        _badTorso = false;
+        _badLeanRun = excessiveLean ? 1 : 0;
+        _maxBadLeanRun = _badLeanRun;
       } else if (knee < _upAngle - 8) {
         cue = kneeHint;
       }
     } else {
       if (knee < _minAngle) _minAngle = knee;
-      if (torso < 145) _badTorso = true;
+
+      if (excessiveLean) {
+        _badLeanRun += 1;
+        if (_badLeanRun > _maxBadLeanRun) _maxBadLeanRun = _badLeanRun;
+      } else {
+        _badLeanRun = 0;
+      }
 
       if (knee >= _upAngle) {
         final errors = <String>[];
         if (_minAngle > targetDepth) {
           errors.add('Kurang dalam saat turun');
         }
+        // Butuh beberapa frame berturut-turut agar tidak salah deteksi.
+        _badTorso = _maxBadLeanRun >= 4;
         if (_badTorso) errors.add(badTorsoCue);
         final score = (100 - errors.length * 18).clamp(40, 100);
         _down = false;
+        _badLeanRun = 0;
+        _maxBadLeanRun = 0;
         recordRep(score, errors);
         return AnalyzerOutput(
           poseValid: true,
@@ -201,7 +227,7 @@ class _SquatAnalyzer extends ExerciseAnalyzer {
         );
       } else if (knee > downAngle + 6 && knee > _minAngle + 8) {
         cue = kneeHint;
-      } else if (_minAngle <= targetDepth && torso > 150) {
+      } else if (_minAngle <= targetDepth && !excessiveLean) {
         cue = 'Bagus, pertahankan';
       }
     }
@@ -225,6 +251,8 @@ class _SquatAnalyzer extends ExerciseAnalyzer {
     _down = false;
     _minAngle = 180;
     _badTorso = false;
+    _badLeanRun = 0;
+    _maxBadLeanRun = 0;
   }
 }
 
