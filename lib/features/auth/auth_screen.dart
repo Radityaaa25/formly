@@ -14,6 +14,7 @@ import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/wordmark.dart';
 import '../../state/app_state.dart';
 import '../../state/auth_state.dart';
+import '../../state/user_data_state.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -67,6 +68,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final role = await resolveCurrentRole();
     ref.read(appRoleProvider.notifier).setRole(role);
     ref.read(currentUserProvider.notifier).setUser(await resolveCurrentUser());
+    ref.invalidate(userProfileProvider);
+    ref.invalidate(userDashboardProvider);
+    ref.invalidate(exerciseCatalogProvider);
+    ref.invalidate(rehabProgramProvider);
     final savedMode = await Prefs.savedMode();
     if (savedMode != null) {
       ref.read(appModeProvider.notifier).setMode(savedMode);

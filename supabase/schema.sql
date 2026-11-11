@@ -273,6 +273,10 @@ DROP POLICY IF EXISTS "Pengguna memperbarui profil sendiri" ON public.profiles;
 CREATE POLICY "Pengguna memperbarui profil sendiri" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Pengguna membuat profil sendiri" ON public.profiles;
+CREATE POLICY "Pengguna membuat profil sendiri" ON public.profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
+
 -- Terapis dapat melihat profil pasien yang care_link-nya 'active'
 DROP POLICY IF EXISTS "Terapis melihat profil pasien terhubung" ON public.profiles;
 CREATE POLICY "Terapis melihat profil pasien terhubung" ON public.profiles
@@ -394,6 +398,11 @@ CREATE POLICY "Pengguna membaca ringkasan AI sesi sendiri" ON public.ai_summarie
 DROP POLICY IF EXISTS "Pengguna membaca streak sendiri" ON public.user_streaks;
 CREATE POLICY "Pengguna membaca streak sendiri" ON public.user_streaks
     FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Pengguna mengelola streak sendiri" ON public.user_streaks;
+CREATE POLICY "Pengguna mengelola streak sendiri" ON public.user_streaks
+    FOR ALL USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Pengguna membaca kalender streak sendiri" ON public.streak_days;
 CREATE POLICY "Pengguna membaca kalender streak sendiri" ON public.streak_days

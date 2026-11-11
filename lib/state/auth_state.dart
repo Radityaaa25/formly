@@ -71,7 +71,8 @@ Future<AppRole> resolveCurrentRole() async {
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(const Duration(seconds: 4));
     return AppRoleLabel.fromDb(row?['role'] as String?);
   } catch (_) {
     return AppRole.self;
@@ -92,7 +93,8 @@ Future<CurrentUser?> resolveCurrentUser() async {
             .from('profiles')
             .select('full_name')
             .eq('id', user.id)
-            .maybeSingle();
+            .maybeSingle()
+            .timeout(const Duration(seconds: 4));
         name = (row?['full_name'] as String?)?.trim() ?? '';
       } catch (_) {
         // abaikan

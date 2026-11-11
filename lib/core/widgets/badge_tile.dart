@@ -29,7 +29,7 @@ class BadgeTile extends StatelessWidget {
                     ? const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF60A5FA), AppColors.primary],
+                        colors: [AppColors.primaryLight, AppColors.primary],
                       )
                     : null,
               ),

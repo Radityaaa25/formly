@@ -74,7 +74,7 @@ class ChatBubble extends StatelessWidget {
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [Color(0xFF60A5FA), AppColors.primary],
+                        colors: [AppColors.primaryLight, AppColors.primary],
                       ),
                     ),
                     child: const Icon(

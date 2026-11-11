@@ -18,8 +18,8 @@ class ScreenTitle extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.w700,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
               letterSpacing: -0.7,
               height: 1.1,
             ),

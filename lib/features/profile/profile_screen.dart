@@ -9,6 +9,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/wordmark.dart';
 import '../../state/app_state.dart';
+import '../../state/auth_state.dart';
+import '../../state/user_data_state.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -19,6 +21,16 @@ class ProfileScreen extends ConsumerWidget {
     final settings = ref.watch(appSettingsProvider);
     final settingsNotifier = ref.read(appSettingsProvider.notifier);
     final rehab = mode == AppMode.rehab;
+    final current = ref.watch(currentUserProvider);
+    final profile = ref.watch(userProfileProvider).value;
+    final dashboard = ref.watch(userDashboardProvider).value;
+    final name =
+        profile?.fullName ??
+        current?.name ??
+        (rehab ? 'Sari Wulandari' : 'Sobat Formly');
+    final initialsText = profile?.initials ?? _initialsFrom(name);
+    final email = current?.email ?? '';
+    final roleLabel = profile?.role.label ?? (rehab ? 'Pasien' : 'Pengguna');
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -44,11 +56,11 @@ class ProfileScreen extends ConsumerWidget {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF60A5FA), AppColors.primary],
+                          colors: [AppColors.primaryLight, AppColors.primary],
                         ),
                       ),
                       child: Text(
-                        rehab ? 'SW' : 'RA',
+                        initialsText,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -57,27 +69,84 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          rehab ? 'Sari Wulandari' : 'Raka Pratama',
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          rehab
-                              ? 'Pasien · Fisioterapis Dimas'
-                              : 'Level 5 · Bandung',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.mutedForeground,
+                          const SizedBox(height: 2),
+                          Text(
+                            email.isNotEmpty
+                                ? email
+                                : (rehab
+                                      ? 'Pasien · program fisioterapi'
+                                      : 'Latihan mandiri'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.mutedForeground,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _ProfileBadge(
+                                label: roleLabel,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              _ProfileBadge(
+                                label: 'Level ${dashboard?.level ?? 1}',
+                                color: AppColors.xp,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              GlassCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 14,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ProfileStat(
+                        icon: Icons.local_fire_department_rounded,
+                        color: AppColors.streak,
+                        value: '${dashboard?.currentStreak ?? 0}',
+                        label: 'Streak',
+                      ),
+                    ),
+                    Expanded(
+                      child: _ProfileStat(
+                        icon: Icons.bolt_rounded,
+                        color: AppColors.xp,
+                        value: '${dashboard?.xp ?? 0}',
+                        label: 'XP',
+                      ),
+                    ),
+                    Expanded(
+                      child: _ProfileStat(
+                        icon: Icons.check_circle_rounded,
+                        color: AppColors.success,
+                        value: '${dashboard?.totalSessions ?? 0}',
+                        label: 'Sesi',
+                      ),
                     ),
                   ],
                 ),
@@ -325,6 +394,11 @@ class ProfileScreen extends ConsumerWidget {
                     if (Env.hasSupabase) {
                       await Supabase.instance.client.auth.signOut();
                     }
+                    ref.invalidate(userProfileProvider);
+                    ref.invalidate(userDashboardProvider);
+                    ref.invalidate(exerciseCatalogProvider);
+                    ref.invalidate(rehabProgramProvider);
+                    ref.read(currentUserProvider.notifier).setUser(null);
                     if (context.mounted) context.go(AppRoutes.auth);
                   },
                   icon: const Icon(Icons.logout_rounded, size: 18),
@@ -345,6 +419,17 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  static String _initialsFrom(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'F';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
   static TimeOfDay _parseTime(String value) {
     final parts = value.split(':');
     if (parts.length != 2) return const TimeOfDay(hour: 18, minute: 30);
@@ -358,6 +443,68 @@ class ProfileScreen extends ConsumerWidget {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+}
+
+class _ProfileBadge extends StatelessWidget {
+  const _ProfileBadge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          color: color == AppColors.xp ? const Color(0xFFB45309) : color,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileStat extends StatelessWidget {
+  const _ProfileStat({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.mutedForeground,
+          ),
+        ),
+      ],
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/env.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/ai_service.dart';
 import '../../core/services/tts_service.dart';
@@ -15,6 +16,7 @@ import '../../core/widgets/pain_slider.dart';
 import '../../data/mock_data.dart';
 import '../../data/models/session_result.dart';
 import '../../state/app_state.dart';
+import '../../state/user_data_state.dart';
 
 class SummaryScreen extends ConsumerStatefulWidget {
   const SummaryScreen({super.key});
@@ -58,6 +60,10 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
     final result =
         ref.watch(lastSessionProvider) ??
         SessionResult.sample(MockData.exerciseById('squat'));
+    final dashboard = ref.watch(userDashboardProvider).value;
+    final streakDays = Env.hasSupabase
+        ? (dashboard?.currentStreak ?? result.streakDays)
+        : result.streakDays;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -98,7 +104,7 @@ class _SummaryScreenState extends ConsumerState<SummaryScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Streak ${result.streakDays} hari',
+                              'Streak $streakDays hari',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
@@ -430,7 +436,7 @@ class _RewardCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF60A5FA), AppColors.primary],
+                colors: [AppColors.primaryLight, AppColors.primary],
               ),
             ),
             child: const Icon(

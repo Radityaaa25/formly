@@ -66,7 +66,7 @@ class _AppBackgroundState extends State<AppBackground>
                       top: -60,
                       child: Transform.translate(
                         offset: Offset(math.sin(t) * 12, math.cos(t) * 14),
-                        child: const _Blob(size: 320, color: Color(0x3538BDF8)),
+                        child: const _Blob(size: 320, color: Color(0x2E22C55E)),
                       ),
                     ),
                     Positioned(

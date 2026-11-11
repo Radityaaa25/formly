@@ -120,7 +120,7 @@ class TherapistActionButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             gradient: const LinearGradient(
-              colors: [Color(0xFF3B82F6), AppColors.primary],
+              colors: [AppColors.primaryDeep, AppColors.primary],
             ),
           ),
           child: Row(

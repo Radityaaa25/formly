@@ -37,13 +37,13 @@ class _GlassButtonState extends State<GlassButton> {
 
   @override
   Widget build(BuildContext context) {
-    final height = widget.size == GlassButtonSize.large ? 54.0 : 46.0;
+    final height = widget.size == GlassButtonSize.large ? 56.0 : 48.0;
     final textColor = switch (widget.variant) {
       GlassButtonVariant.primary => Colors.white,
-      GlassButtonVariant.secondary => AppColors.primary,
+      GlassButtonVariant.secondary => AppColors.primaryDeep,
       GlassButtonVariant.danger => AppColors.destructive,
     };
-    final borderRadius = BorderRadius.circular(999);
+    final borderRadius = BorderRadius.circular(18);
 
     Widget body;
     if (widget.variant == GlassButtonVariant.primary) {
@@ -51,11 +51,13 @@ class _GlassButtonState extends State<GlassButton> {
         decoration: BoxDecoration(
           borderRadius: borderRadius,
           gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF3B82F6), AppColors.primary],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.primaryLight, AppColors.primary],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+          border: Border.all(
+            color: AppColors.primaryDeep.withValues(alpha: 0.35),
+          ),
         ),
         child: Stack(
           alignment: Alignment.center,
@@ -82,13 +84,13 @@ class _GlassButtonState extends State<GlassButton> {
       body = Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
+          color: Colors.white,
           borderRadius: borderRadius,
           border: Border.all(
             color: widget.variant == GlassButtonVariant.danger
-                ? AppColors.destructive.withValues(alpha: 0.3)
-                : Colors.white.withValues(alpha: 0.8),
-            width: 1.2,
+                ? AppColors.destructive.withValues(alpha: 0.35)
+                : AppColors.border,
+            width: 1.6,
           ),
         ),
         child: _buildContent(textColor),
@@ -97,9 +99,10 @@ class _GlassButtonState extends State<GlassButton> {
 
     return Opacity(
       opacity: _enabled ? 1 : 0.5,
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1,
-        duration: const Duration(milliseconds: 100),
+      child: AnimatedSlide(
+        offset: _pressed ? const Offset(0, 0.05) : Offset.zero,
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOut,
         child: Container(
           height: height,
           width: widget.expand ? double.infinity : null,
@@ -107,17 +110,22 @@ class _GlassButtonState extends State<GlassButton> {
             borderRadius: borderRadius,
             boxShadow: widget.variant == GlassButtonVariant.primary
                 ? [
+                    const BoxShadow(
+                      color: AppColors.primaryDeep,
+                      blurRadius: 0,
+                      offset: Offset(0, 4),
+                    ),
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
+                      color: AppColors.primary.withValues(alpha: 0.28),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: AppColors.foreground.withValues(alpha: 0.08),
+                      blurRadius: 0,
+                      offset: const Offset(0, 3),
                     ),
                   ],
           ),
@@ -169,8 +177,8 @@ class _GlassButtonState extends State<GlassButton> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
-                  fontSize: widget.size == GlassButtonSize.large ? 16 : 14.5,
-                  fontWeight: FontWeight.w700,
+                  fontSize: widget.size == GlassButtonSize.large ? 16.5 : 14.5,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
                   height: 1.1,
                 ),
@@ -184,8 +192,8 @@ class _GlassButtonState extends State<GlassButton> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
-                fontSize: widget.size == GlassButtonSize.large ? 16 : 14.5,
-                fontWeight: FontWeight.w700,
+                fontSize: widget.size == GlassButtonSize.large ? 16.5 : 14.5,
+                fontWeight: FontWeight.w800,
                 letterSpacing: -0.2,
                 height: 1.1,
               ),

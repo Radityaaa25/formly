@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-class GlassCard extends StatelessWidget {
+class GlassCard extends StatefulWidget {
   const GlassCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(20),
     this.margin,
-    this.radius = 24,
+    this.radius = 22,
     this.color,
     this.borderColor,
     this.onTap,
@@ -23,49 +23,66 @@ class GlassCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<GlassCard> createState() => _GlassCardState();
+}
+
+class _GlassCardState extends State<GlassCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(radius);
+    final borderRadius = BorderRadius.circular(widget.radius);
 
     final cardBody = Container(
-      padding: padding,
+      padding: widget.padding,
       decoration: BoxDecoration(
-        color: color ?? Colors.white.withValues(alpha: 0.92),
+        color: widget.color ?? Colors.white,
         borderRadius: borderRadius,
         border: Border.all(
-          color: borderColor ?? Colors.white.withValues(alpha: 0.95),
-          width: 1.2,
+          color: widget.borderColor ?? AppColors.border,
+          width: 1.5,
         ),
       ),
-      child: Material(type: MaterialType.transparency, child: child),
+      child: Material(type: MaterialType.transparency, child: widget.child),
     );
 
-    return Container(
-      margin: margin,
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: onTap == null
-          ? cardBody
-          : Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: borderRadius,
-                onTap: onTap,
-                child: cardBody,
+    return AnimatedScale(
+      scale: _pressed ? 0.98 : 1,
+      duration: const Duration(milliseconds: 110),
+      curve: Curves.easeOut,
+      child: Container(
+        margin: widget.margin,
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.foreground.withValues(
+                alpha: _pressed ? 0.04 : 0.07,
               ),
+              blurRadius: 0,
+              offset: const Offset(0, 4),
             ),
+            BoxShadow(
+              color: AppColors.foreground.withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: widget.onTap == null
+            ? cardBody
+            : Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: borderRadius,
+                  onHighlightChanged: (value) {
+                    if (mounted) setState(() => _pressed = value);
+                  },
+                  onTap: widget.onTap,
+                  child: cardBody,
+                ),
+              ),
+      ),
     );
   }
 }

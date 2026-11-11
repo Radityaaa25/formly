@@ -50,19 +50,19 @@ class _GlassNav extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white, width: 1.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.border, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.12),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: AppColors.foreground.withValues(alpha: 0.08),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: AppColors.primary.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -112,13 +112,9 @@ class _NavItem extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: active
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: active
-              ? Border.all(color: AppColors.primary.withValues(alpha: 0.2))
-              : null,
+          color: active ? AppColors.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          border: active ? Border.all(color: AppColors.primary) : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -128,7 +124,7 @@ class _NavItem extends StatelessWidget {
             Icon(
               icon,
               size: 22,
-              color: active ? AppColors.primary : AppColors.mutedForeground,
+              color: active ? AppColors.primaryDeep : AppColors.mutedForeground,
             ),
             const SizedBox(height: 3),
             Text(
@@ -136,8 +132,10 @@ class _NavItem extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                color: active ? AppColors.primary : AppColors.mutedForeground,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                color: active
+                    ? AppColors.primaryDeep
+                    : AppColors.mutedForeground,
                 height: 1.1,
               ),
             ),
