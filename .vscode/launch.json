@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Formly (Local Mock)",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "Formly (Supabase & Groq)",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": [
+        "--dart-define", "SUPABASE_URL=https://PROYEK_ANDA.supabase.co",
+        "--dart-define", "SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      ]
+    }
+  ]
+}
