@@ -99,13 +99,13 @@ _Side? _pickSide(PoseFrame frame) {
     required PoseLandmarkType elbow,
     required PoseLandmarkType wrist,
   }) {
-    final s = frame.point(shoulder);
-    final h = frame.point(hip);
-    final k = frame.point(knee);
-    final a = frame.point(ankle);
+    final s = frame.point(shoulder, minLikelihood: 0.2);
+    final h = frame.point(hip, minLikelihood: 0.2);
+    final k = frame.point(knee, minLikelihood: 0.2);
+    final a = frame.point(ankle, minLikelihood: 0.15);
     if (s == null || h == null || k == null || a == null) return null;
     final score = h.likelihood + k.likelihood + a.likelihood + s.likelihood;
-    if (score < 1.6) return null;
+    if (score < 1.2) return null;
     return _Side(
       shoulder: s,
       hip: h,

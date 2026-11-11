@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
@@ -35,6 +36,7 @@ class _PoseCameraState extends State<PoseCamera> with WidgetsBindingObserver {
   bool _failed = false;
   bool _processing = false;
   bool _streaming = false;
+  int _errorCount = 0;
   DateTime _lastProcess = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
@@ -86,13 +88,34 @@ class _PoseCameraState extends State<PoseCamera> with WidgetsBindingObserver {
           orElse: () => cameras.first,
         ),
       );
-      final controller = CameraController(
-        description,
-        ResolutionPreset.medium,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,
-      );
-      await controller.initialize();
+      // CameraX mengembalikan NV21 yang sudah rapi (1 plane) di Android.
+      // Sebelumnya yuv420 dikonversi manual tanpa menghormati row/pixel stride
+      // sehingga buffer NV21 rusak dan ML Kit tidak pernah menemukan pose.
+      final imageFormatGroup = defaultTargetPlatform == TargetPlatform.android
+          ? ImageFormatGroup.nv21
+          : ImageFormatGroup.bgra8888;
+      late CameraController controller;
+      try {
+        controller = CameraController(
+          description,
+          ResolutionPreset.medium,
+          enableAudio: false,
+          imageFormatGroup: imageFormatGroup,
+        );
+        await controller.initialize();
+      } catch (_) {
+        if (defaultTargetPlatform != TargetPlatform.android ||
+            imageFormatGroup != ImageFormatGroup.nv21) {
+          rethrow;
+        }
+        controller = CameraController(
+          description,
+          ResolutionPreset.medium,
+          enableAudio: false,
+          imageFormatGroup: ImageFormatGroup.yuv420,
+        );
+        await controller.initialize();
+      }
       if (!mounted) {
         await controller.dispose();
         return;
@@ -158,6 +181,7 @@ class _PoseCameraState extends State<PoseCamera> with WidgetsBindingObserver {
 
       final poses = await detector.processImage(inputImage);
       if (!mounted) return;
+      _errorCount = 0;
       if (poses.isNotEmpty) {
         final pose = poses.first;
         widget.onPose(
@@ -176,8 +200,11 @@ class _PoseCameraState extends State<PoseCamera> with WidgetsBindingObserver {
           ),
         );
       }
-    } catch (_) {
-      // Frame gagal diproses, lanjut frame berikutnya.
+    } catch (error) {
+      _errorCount++;
+      if (_errorCount <= 5) {
+        debugPrint('PoseCamera: gagal memproses frame ($_errorCount): $error');
+      }
     } finally {
       _processing = false;
     }
@@ -236,14 +263,11 @@ class _PoseCameraState extends State<PoseCamera> with WidgetsBindingObserver {
 
     if (format == ImageFormatGroup.bgra8888) {
       final bytes = image.planes.first.bytes;
-      final rotationValue =
-          InputImageRotationValue.fromRawValue(description.sensorOrientation) ??
-          InputImageRotation.rotation0deg;
       return InputImage.fromBytes(
         bytes: bytes,
         metadata: InputImageMetadata(
           size: Size(image.width.toDouble(), image.height.toDouble()),
-          rotation: rotationValue,
+          rotation: rotation,
           format: InputImageFormat.bgra8888,
           bytesPerRow: image.planes.first.bytesPerRow,
         ),
@@ -257,18 +281,41 @@ class _PoseCameraState extends State<PoseCamera> with WidgetsBindingObserver {
     final yPlane = image.planes[0];
     final uPlane = image.planes[1];
     final vPlane = image.planes[2];
+    final width = image.width;
+    final height = image.height;
 
-    final ySize = yPlane.bytes.length;
-    final uvSize = uPlane.bytes.length;
-    final nv21 = Uint8List(ySize + uvSize * 2);
+    final ySize = width * height;
+    final nv21 = Uint8List(ySize + ySize ~/ 2);
 
-    nv21.setRange(0, ySize, yPlane.bytes);
+    final yRowStride = yPlane.bytesPerRow;
+    final yPixelStride = yPlane.bytesPerPixel ?? 1;
+    var dst = 0;
+    for (var row = 0; row < height; row++) {
+      final rowStart = row * yRowStride;
+      for (var col = 0; col < width; col++) {
+        final index = rowStart + col * yPixelStride;
+        if (index < yPlane.bytes.length) {
+          nv21[dst] = yPlane.bytes[index];
+        }
+        dst++;
+      }
+    }
 
-    var index = ySize;
-    for (var i = 0; i < uvSize; i++) {
-      // NV21 = Y + interleaved VU
-      nv21[index++] = vPlane.bytes[i];
-      nv21[index++] = uPlane.bytes[i];
+    final uvRowStride = uPlane.bytesPerRow;
+    final uPixelStride = uPlane.bytesPerPixel ?? 1;
+    final vPixelStride = vPlane.bytesPerPixel ?? 1;
+    final uvHeight = height ~/ 2;
+    final uvWidth = width ~/ 2;
+    for (var row = 0; row < uvHeight; row++) {
+      final uRowStart = row * uvRowStride;
+      final vRowStart = row * vPlane.bytesPerRow;
+      for (var col = 0; col < uvWidth; col++) {
+        final uIndex = uRowStart + col * uPixelStride;
+        final vIndex = vRowStart + col * vPixelStride;
+        // NV21 = Y + interleaved VU
+        nv21[dst++] = vIndex < vPlane.bytes.length ? vPlane.bytes[vIndex] : 128;
+        nv21[dst++] = uIndex < uPlane.bytes.length ? uPlane.bytes[uIndex] : 128;
+      }
     }
     return nv21;
   }
